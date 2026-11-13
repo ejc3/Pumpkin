@@ -228,9 +228,24 @@ pub fn stop_or_exit_server() {
 /// Runs one Java connection from handshake to disconnect: login, configuration, play, and the
 /// player save when they leave.
 pub async fn serve_java_connection(server: Arc<Server>, mut pending: PendingConnection) {
-    // Stop waiting on a pending login once this server stops
+    // Stop waiting on a pending login once this server stops, or once the login timeout runs
+    // out: a connection that never finishes logging in would otherwise hold its task and its
+    // socket for as long as the client keeps it open.
+    let login_timeout = server.advanced_config.networking.java.login_timeout;
+    let login = pending.handle_login_sequence(&server);
     let login_result = select! {
-        result = pending.handle_login_sequence(&server) => result,
+        result = async {
+            if login_timeout == 0 {
+                return login.await;
+            }
+            match tokio::time::timeout(std::time::Duration::from_secs(login_timeout), login).await {
+                Ok(result) => result,
+                Err(_) => {
+                    debug!("Closing a Java connection that did not log in within {login_timeout} s");
+                    PacketHandlerResult::Stop
+                }
+            }
+        } => result,
         () = server.stop_token.cancelled() => PacketHandlerResult::Stop,
     };
 

@@ -28,6 +28,10 @@ pub struct JavaConfig {
         alias = "keep-alive-interval"
     )]
     pub keep_alive_time: u64,
+    /// Seconds a connection has to finish logging in (handshake, login and configuration)
+    /// before it is closed, as vanilla's login timeout does. `0` disables the limit.
+    #[serde(alias = "login-timeout")]
+    pub login_timeout: u64,
     /// Java Edition packet compression settings.
     pub compression: CompressionConfig,
     /// Message of the Day; the server's description displayed on the status screen.
@@ -54,6 +58,7 @@ impl Default for JavaConfig {
             view_distance,
             simulation_distance,
             keep_alive_time: 15,
+            login_timeout: 30,
             compression: CompressionConfig::default(),
             motd: "A blazingly fast Pumpkin server!".to_string(),
             authentication: AuthenticationConfig::default(),
@@ -65,6 +70,15 @@ impl Default for JavaConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn login_timeout_defaults_to_vanillas_and_reads_both_spellings() {
+        assert_eq!(JavaConfig::default().login_timeout, 30);
+        let config: JavaConfig = toml::from_str("login_timeout = 5").unwrap();
+        assert_eq!(config.login_timeout, 5);
+        let config: JavaConfig = toml::from_str("login-timeout = 0").unwrap();
+        assert_eq!(config.login_timeout, 0);
+    }
 
     #[test]
     fn default_keep_alive_time() {

@@ -2,6 +2,7 @@ mod block_tuning_and_invert;
 mod commands_and_gamemode;
 mod embedded_stop;
 mod login_and_movement;
+pub mod login_timeout;
 mod loot_tables;
 mod player_actions;
 mod polar_bear;
@@ -21,6 +22,8 @@ pub async fn run_bot_tests(
     summary_lines: &mut Vec<String>,
 ) -> Result<(), String> {
     status_ping::run_bot_status_ping_test(addr, summary_lines).await?;
+
+    login_timeout::run_login_timeout_test(addr, summary_lines).await?;
 
     let (mut bot1, bot2) =
         login_and_movement::run_login_and_movement_tests(server, addr, summary_lines).await?;
